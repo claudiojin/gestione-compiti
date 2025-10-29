@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { ChangeEvent, FormEvent, useState, useTransition } from "react";
 
 type TaskCardProps = {
   task: {
@@ -13,6 +13,7 @@ type TaskCardProps = {
     importance: number;
     aiPriorityScore: number | null;
     createdAt: string;
+    updatedAt: string;
   };
 };
 
@@ -52,16 +53,24 @@ function statusLabel(status: string) {
   }
 }
 
+const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "TODO", label: "Da fare" },
+  { value: "IN_PROGRESS", label: "In corso" },
+  { value: "DONE", label: "Completata" },
+];
+
 export function TaskCard({ task }: TaskCardProps) {
   const router = useRouter();
   const [isUpdating, startTransition] = useTransition();
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [noteValue, setNoteValue] = useState(task.description ?? "");
+  const [noteStatus, setNoteStatus] = useState<string | null>(null);
 
   const dueLabel = formatDueDate(task.dueDate);
   const priority = task.aiPriorityScore ?? 0;
-  const isDone = task.status.toUpperCase() === "DONE";
 
-  const handleToggleStatus = () => {
-    const nextStatus = isDone ? "TODO" : "DONE";
+  const handleStatusChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextStatus = event.target.value;
     startTransition(async () => {
       try {
         const res = await fetch(`/api/tasks/${task.id}`, {
@@ -102,6 +111,34 @@ export function TaskCard({ task }: TaskCardProps) {
     });
   };
 
+  const handleNoteSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const payload = { description: noteValue.trim() ? noteValue.trim() : null };
+    setNoteStatus("Salvataggio...");
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/tasks/${task.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          console.error("Errore nel salvataggio della nota", await res.text());
+          setNoteStatus("Non e stato possibile salvare la nota.");
+          return;
+        }
+        setNoteStatus("Nota aggiornata.");
+        setIsEditingNote(false);
+        router.refresh();
+      } catch (error) {
+        console.error("Errore nel salvataggio della nota", error);
+        setNoteStatus("Errore di rete, riprova.");
+      }
+    });
+  };
+
   return (
     <article
       className="group relative flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_12px_24px_-16px_rgba(15,23,42,0.35)] backdrop-blur transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_20px_40px_-24px_rgba(15,23,42,0.4)] dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-slate-700"
@@ -113,8 +150,8 @@ export function TaskCard({ task }: TaskCardProps) {
           >
             {task.title}
           </h3>
-          {task.description ? (
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          {task.description && !isEditingNote ? (
+            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">
               {task.description}
             </p>
           ) : null}
@@ -138,14 +175,23 @@ export function TaskCard({ task }: TaskCardProps) {
           </div>
         </div>
         <div className="flex shrink-0 gap-2 self-start">
-          <button
-            type="button"
-            onClick={handleToggleStatus}
-            disabled={isUpdating}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-transparent hover:bg-slate-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-          >
-            {isDone ? "Segna da fare" : "Segna completata"}
-          </button>
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <label className="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              Stato
+            </label>
+            <select
+              value={task.status}
+              onChange={handleStatusChange}
+              disabled={isUpdating}
+              className="rounded-full border border-transparent bg-transparent px-2 py-1 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10 disabled:opacity-60 dark:text-slate-200 dark:focus:ring-slate-200/20"
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             type="button"
             onClick={handleDelete}
@@ -155,6 +201,63 @@ export function TaskCard({ task }: TaskCardProps) {
             Elimina
           </button>
         </div>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm dark:border-slate-700 dark:bg-slate-800/50">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-slate-700 dark:text-slate-200">Nota</span>
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditingNote((prev) => !prev);
+              setNoteStatus(null);
+              setNoteValue(task.description ?? "");
+            }}
+            className="text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+          >
+            {isEditingNote ? "Annulla" : task.description ? "Modifica nota" : "Aggiungi nota"}
+          </button>
+        </div>
+        {isEditingNote ? (
+          <form onSubmit={handleNoteSubmit} className="mt-3 space-y-3">
+            <textarea
+              value={noteValue}
+              onChange={(event) => setNoteValue(event.target.value)}
+              rows={3}
+              placeholder="Annota dettagli, collegamenti o punti aperti..."
+              className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/15 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+            <div className="flex items-center justify-between gap-3">
+              {noteStatus ? (
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {noteStatus}
+                </span>
+              ) : null}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingNote(false);
+                    setNoteStatus(null);
+                    setNoteValue(task.description ?? "");
+                  }}
+                  className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600"
+                >
+                  Chiudi
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white"
+                >
+                  Salva nota
+                </button>
+              </div>
+            </div>
+          </form>
+        ) : (
+          <p className="mt-2 min-h-[1.5rem] whitespace-pre-wrap text-slate-600 dark:text-slate-300">
+            {task.description ? task.description : "Nessuna nota salvata."}
+          </p>
+        )}
       </div>
       <div className="flex flex-wrap items-center text-xs text-slate-400 dark:text-slate-500">
         <span>

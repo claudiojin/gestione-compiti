@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { AddTaskBar } from "@/components/add-task-bar";
 import { TaskCard } from "@/components/task-card";
+import { getServerSession } from "@/lib/session";
 import { listTasks } from "@/lib/tasks";
 
 type ClientTask = {
@@ -14,6 +16,7 @@ type ClientTask = {
   aiPriorityScore: number | null;
   status: string;
   source: string;
+  updatedAt: string;
 };
 
 function formatDateLabel(date: Date) {
@@ -31,6 +34,7 @@ function toClient(task: Awaited<ReturnType<typeof listTasks>>[number]): ClientTa
     description: task.description ?? null,
     dueDate: task.dueDate ? task.dueDate.toISOString() : null,
     createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
     importance: task.importance,
     aiPriorityScore: task.aiPriorityScore,
     status: task.status,
@@ -39,16 +43,34 @@ function toClient(task: Awaited<ReturnType<typeof listTasks>>[number]): ClientTa
 }
 
 export default async function Home() {
-  const tasks = await listTasks();
+  const session = await getServerSession();
+  if (!session.userId) {
+    redirect("/login");
+  }
+
+  const tasks = await listTasks(session.userId);
   const clientTasks = tasks.map(toClient);
 
-  const openTasks = clientTasks.filter(
-    (task) => task.status.toUpperCase() !== "DONE",
+  const activeTasks = clientTasks
+    .filter((task) => task.status.toUpperCase() !== "DONE")
+    .sort((a, b) => {
+      const priorityA = a.aiPriorityScore ?? 0;
+      const priorityB = b.aiPriorityScore ?? 0;
+      if (priorityA === priorityB) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      return priorityB - priorityA;
+    });
+  const completedTasks = clientTasks
+    .filter((task) => task.status.toUpperCase() === "DONE")
+    .sort(
+      (a, b) =>
+        new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
+    );
+  const inProgressTasks = clientTasks.filter(
+    (task) => task.status.toUpperCase() === "IN_PROGRESS",
   );
-  const completedToday = clientTasks.filter(
-    (task) => task.status.toUpperCase() === "DONE",
-  );
-  const topTask = openTasks[0];
+  const topTask = activeTasks[0];
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 pb-32 pt-6 sm:px-6 lg:px-10 lg:pb-16">
@@ -82,15 +104,21 @@ export default async function Home() {
             <p className="text-xs uppercase tracking-wide text-white/60">
               Attivita aperte
             </p>
-            <p className="mt-1 text-2xl font-semibold">{openTasks.length}</p>
+            <p className="mt-1 text-2xl font-semibold">{activeTasks.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
+            <p className="text-xs uppercase tracking-wide text-white/60">
+              In corso
+            </p>
+            <p className="mt-1 text-2xl font-semibold">{inProgressTasks.length}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
             <p className="text-xs uppercase tracking-wide text-white/60">
               Completate
             </p>
-            <p className="mt-1 text-2xl font-semibold">{completedToday.length}</p>
+            <p className="mt-1 text-2xl font-semibold">{completedTasks.length}</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur sm:col-span-3">
             <p className="text-xs uppercase tracking-wide text-white/60">
               Priorita principale
             </p>
@@ -104,13 +132,13 @@ export default async function Home() {
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            Coda delle attivita
+            Attivita attive
           </h2>
           <span className="text-sm text-slate-500 dark:text-slate-400">
-            Ordinate dalla priorita AI • aggiornamento automatico
+            Da fare e in corso • ordinate dalla priorita AI
           </span>
         </div>
-        {clientTasks.length === 0 ? (
+        {activeTasks.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
             <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
               Non ci sono attivita in elenco.
@@ -121,7 +149,29 @@ export default async function Home() {
           </div>
         ) : (
           <div className="grid gap-4 pb-4 sm:gap-5">
-            {clientTasks.map((task) => (
+            {activeTasks.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Attivita completate
+          </h2>
+          <span className="text-sm text-slate-500 dark:text-slate-400">
+            Storico piu recente in cima
+          </span>
+        </div>
+        {completedTasks.length === 0 ? (
+          <p className="rounded-3xl border border-dashed border-slate-300 bg-white/50 px-6 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
+            Completa un&apos;attivita per vederla comparire qui.
+          </p>
+        ) : (
+          <div className="grid gap-4 pb-4 sm:gap-5">
+            {completedTasks.map((task) => (
               <TaskCard key={task.id} task={task} />
             ))}
           </div>

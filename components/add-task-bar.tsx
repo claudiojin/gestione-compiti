@@ -16,6 +16,7 @@ export function AddTaskBar() {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState<string>("");
   const [importance, setImportance] = useState(3);
+  const [note, setNote] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -24,6 +25,7 @@ export function AddTaskBar() {
     setTitle("");
     setDueDate("");
     setImportance(3);
+    setNote("");
     setIsExpanded(false);
   };
 
@@ -42,6 +44,9 @@ export function AddTaskBar() {
       const iso = new Date(dueDate).toISOString();
       payload.dueDate = iso;
     }
+    if (note.trim()) {
+      payload.description = note.trim();
+    }
 
     startTransition(async () => {
       try {
@@ -55,16 +60,16 @@ export function AddTaskBar() {
           const error = await response.json().catch(() => null);
           setFeedback(
             (error && (error.error as string)) ||
-              "Non e stato possibile creare l'attivita. Riprova.",
+              "Non e stato possibile creare l&apos;attivita. Riprova.",
           );
           return;
         }
 
-        setFeedback("Attivita acquisita! L'AI la sta ordinando.");
+        setFeedback("Attivita acquisita! L&apos;AI la sta ordinando.");
         resetForm();
         router.refresh();
       } catch (error) {
-        console.error("Errore durante l'aggiunta dell'attivita", error);
+        console.error("Errore durante l&apos;aggiunta dell&apos;attivita", error);
         setFeedback("Errore di rete: riprova.");
       }
     });
@@ -129,9 +134,20 @@ export function AddTaskBar() {
                     disabled={isPending}
                   />
                   <span className="w-20 text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {IMPORTANCE_LEVELS.find((level) => level.value === importance)?.label}
+                    {IMPORTANCE_LEVELS.find((level) => level.value === importance)?.label}
                   </span>
                 </div>
+              </label>
+              <label className="sm:col-span-2 space-y-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+                Nota veloce
+                <textarea
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  rows={3}
+                  placeholder="Aggiungi dettagli o il prossimo passo..."
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  disabled={isPending}
+                />
               </label>
             </div>
           ) : null}
@@ -149,7 +165,7 @@ export function AddTaskBar() {
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
               {feedback}
             </p>
-      ) : null}
+          ) : null}
         </div>
       </form>
     </section>

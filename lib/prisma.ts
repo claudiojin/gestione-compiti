@@ -1,4 +1,7 @@
-import { PrismaClient } from "@/src/generated/client";// Reuse the Prisma instance across hot reloads in development.
+import { PrismaClient, Prisma } from "../src/generated/client";
+import type { TaskModel } from "../src/generated/models/Task";
+
+// Reuse the Prisma instance across hot reloads in development.
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
@@ -13,4 +16,5 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-export type { Prisma, Task } from "@/src/generated/client";
+export type { Prisma };
+export type Task = TaskModel;

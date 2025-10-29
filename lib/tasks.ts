@@ -1,8 +1,11 @@
-import type { Prisma, Task } from "@prisma/client";
+import type { Prisma } from "../src/generated/client";
+import type { TaskModel } from "../src/generated/models/Task";
 
 import { prisma } from "./prisma";
 import { calcPriority } from "./priority";
 import type { CreateTaskInput, UpdateTaskInput } from "./validators";
+
+type Task = TaskModel;
 
 const DEFAULT_STATUS = "TODO";
 const DEFAULT_SOURCE = "manual";
@@ -36,8 +39,9 @@ function normalizeDueDate(value: CreateTaskInput["dueDate"]): Date | null {
   return null;
 }
 
-export async function listTasks(): Promise<Task[]> {
+export async function listTasks(userId: string): Promise<Task[]> {
   return prisma.task.findMany({
+    where: { userId },
     orderBy: [
       { aiPriorityScore: { sort: "desc", nulls: "last" } },
       { createdAt: "desc" },
@@ -45,11 +49,11 @@ export async function listTasks(): Promise<Task[]> {
   });
 }
 
-export async function getTask(id: string): Promise<Task | null> {
-  return prisma.task.findUnique({ where: { id } });
+export async function getTask(userId: string, id: string): Promise<Task | null> {
+  return prisma.task.findFirst({ where: { id, userId } });
 }
 
-export async function createTask(input: CreateTaskInput): Promise<Task> {
+export async function createTask(userId: string, input: CreateTaskInput): Promise<Task> {
   const dueDate = normalizeDueDate(input.dueDate);
   const importance = input.importance ?? DEFAULT_IMPORTANCE;
   const aiPriorityScore = calcPriority({ dueDate, importance });
@@ -63,12 +67,17 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
       status: sanitizeStatus(input.status),
       source: sanitizeSource(input.source),
       aiPriorityScore,
+      userId,
     },
   });
 }
 
-export async function updateTask(id: string, input: UpdateTaskInput): Promise<Task | null> {
-  const existing = await prisma.task.findUnique({ where: { id } });
+export async function updateTask(
+  userId: string,
+  id: string,
+  input: UpdateTaskInput,
+): Promise<Task | null> {
+  const existing = await prisma.task.findFirst({ where: { id, userId } });
   if (!existing) return null;
 
   const dueDate =
@@ -97,14 +106,13 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
     data.aiPriorityScore = calcPriority({ dueDate, importance });
   }
 
-  return prisma.task.update({
-    where: { id },
-    data,
-  });
+  return prisma.task.update({ where: { id }, data });
 }
 
-export async function deleteTask(id: string): Promise<Task | null> {
+export async function deleteTask(userId: string, id: string): Promise<Task | null> {
   try {
+    const existing = await prisma.task.findFirst({ where: { id, userId } });
+    if (!existing) return null;
     return await prisma.task.delete({ where: { id } });
   } catch {
     return null;

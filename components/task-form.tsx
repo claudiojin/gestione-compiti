@@ -49,7 +49,7 @@ export function TaskForm({ mode = "create" }: TaskFormProps) {
           const result = await response.json().catch(() => null);
           setError(
             (result && (result.error as string)) ||
-              "Impossibile salvare l'attivita. Riprova.",
+              "Impossibile salvare l&apos;attivita. Riprova.",
           );
           return;
         }

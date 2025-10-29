@@ -1,12 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+import { getRequestSession } from "@/lib/session";
 import { deleteTask, updateTask } from "@/lib/tasks";
 import { taskIdSchema, updateTaskSchema } from "@/lib/validators";
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 function validateTaskId(id: string) {
@@ -24,8 +25,14 @@ function validateTaskId(id: string) {
   return { ok: true as const, id: parsed.data };
 }
 
-export async function PATCH(request: Request, context: RouteContext) {
-  const validation = validateTaskId(context.params.id);
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  const session = await getRequestSession(request);
+  if (!session.userId) {
+    return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+  }
+
+  const params = await context.params;
+  const validation = validateTaskId(params.id);
   if (!validation.ok) {
     return validation.response;
   }
@@ -46,7 +53,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const updated = await updateTask(validation.id, parsedBody.data);
+    const updated = await updateTask(session.userId, validation.id, parsedBody.data);
     if (!updated) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
@@ -58,14 +65,20 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(request: Request, context: RouteContext) {
-  const validation = validateTaskId(context.params.id);
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  const session = await getRequestSession(request);
+  if (!session.userId) {
+    return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+  }
+
+  const params = await context.params;
+  const validation = validateTaskId(params.id);
   if (!validation.ok) {
     return validation.response;
   }
 
   try {
-    const deleted = await deleteTask(validation.id);
+    const deleted = await deleteTask(session.userId, validation.id);
     if (!deleted) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
