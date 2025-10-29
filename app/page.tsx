@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { AddTaskBar } from "@/components/add-task-bar";
 import { TaskCard } from "@/components/task-card";
-import { getServerSession } from "@/lib/session";
+import { getSessionData } from "@/lib/session";
 import { listTasks } from "@/lib/tasks";
 
 type ClientTask = {
@@ -43,7 +43,7 @@ function toClient(task: Awaited<ReturnType<typeof listTasks>>[number]): ClientTa
 }
 
 export default async function Home() {
-  const session = await getServerSession();
+  const session = await getSessionData();
   if (!session.userId) {
     redirect("/login");
   }

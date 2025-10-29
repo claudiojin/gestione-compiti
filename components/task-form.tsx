@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 
+import { VoiceTaskInput, type VoiceSuggestion } from "@/components/voice-task-input";
+
 type TaskFormProps = {
   mode?: "create" | "edit";
 };
@@ -15,7 +17,20 @@ export function TaskForm({ mode = "create" }: TaskFormProps) {
   const [importance, setImportance] = useState(3);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const applyVoiceSuggestion = (suggestion: VoiceSuggestion) => {
+    setVoiceTranscript(suggestion.transcript);
+    setError(null);
+    setSuccess("Trascrizione vocale aggiunta! Modifica e salva quando sei pronto.");
+
+    setTitle((prev) => (prev.trim().length > 0 ? prev : suggestion.title));
+    setDescription((prev) => {
+      if (!prev.trim()) return suggestion.description;
+      return `${prev}\n\n${suggestion.description}`.trim();
+    });
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -155,6 +170,16 @@ export function TaskForm({ mode = "create" }: TaskFormProps) {
           </div>
         </div>
       </div>
+
+      <VoiceTaskInput onSuggestion={applyVoiceSuggestion} />
+      {voiceTranscript ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Trascrizione originale
+          </p>
+          <p className="mt-2 whitespace-pre-wrap">{voiceTranscript}</p>
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">

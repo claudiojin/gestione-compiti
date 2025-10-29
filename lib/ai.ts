@@ -177,3 +177,118 @@ export async function generateTodayPlan(tasks: Task[]): Promise<TodayPlan> {
     return fallbackPlan(tasks);
   }
 }
+
+type TranscriptionPayload = {
+  buffer: ArrayBuffer | Uint8Array | SharedArrayBuffer;
+  filename: string;
+  mimeType: string;
+};
+
+export type TaskSuggestion = {
+  title: string;
+  description: string;
+};
+
+function normalizeBuffer(input: ArrayBuffer | Uint8Array | SharedArrayBuffer): ArrayBufferLike {
+  if (input instanceof Uint8Array) {
+    return input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength);
+  }
+  if (typeof SharedArrayBuffer !== "undefined" && input instanceof SharedArrayBuffer) {
+    return input;
+  }
+  return input;
+}
+
+export async function transcribeAudio(input: TranscriptionPayload): Promise<string | null> {
+  if (!openaiClient) {
+    return null;
+  }
+
+  const model = process.env.OPENAI_WHISPER_MODEL ?? "whisper-1";
+  const arrayBuffer = normalizeBuffer(input.buffer);
+
+  try {
+    const blob = new Blob([arrayBuffer], { type: input.mimeType || "audio/webm" });
+    const file = new File([blob], input.filename || "voice-input.webm", {
+      type: input.mimeType || "audio/webm",
+    });
+
+    const transcription: any = await openaiClient.audio.transcriptions.create({
+      model,
+      file,
+      response_format: "text",
+    });
+
+    const text = typeof transcription === "string" ? transcription : transcription?.text ?? "";
+
+    return text?.trim() ?? null;
+  } catch (error) {
+    console.error("transcribeAudio failed", error);
+    return null;
+  }
+}
+
+export async function suggestTaskFromTranscript(
+  transcript: string,
+): Promise<TaskSuggestion> {
+  if (!openaiClient) {
+    const fallbackTitle = transcript.split(/[.!?\n]/)[0]?.trim() ?? "Nuova attività";
+    return {
+      title: fallbackTitle.slice(0, 80) || "Nuova attività",
+      description: transcript.trim().slice(0, 400) || "Note importate dalla dettatura.",
+    };
+  }
+
+  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+
+  try {
+    const response = await openaiClient.responses.create({
+      model,
+      input: [
+        {
+          role: "system",
+          content:
+            "Sei un assistente che trasforma trascrizioni audio in attività. Rispondi solo con un JSON con le chiavi title e description in italiano.",
+        },
+        {
+          role: "user",
+          content: `Trascrizione:\n${transcript}\nGenera un oggetto JSON con title (max 80 caratteri) e description (max 400 caratteri).`,
+        },
+      ],
+    });
+
+    let clean = response.output_text?.trim() ?? "";
+    if (!clean) {
+      throw new Error("Empty response from OpenAI for task suggestion");
+    }
+
+    if (clean.startsWith("```")) {
+      clean = clean.replace(/^```(?:json)?\s*/i, "");
+      const closing = clean.lastIndexOf("```");
+      if (closing !== -1) {
+        clean = clean.slice(0, closing);
+      }
+      clean = clean.trim();
+    }
+
+    const parsed = JSON.parse(clean) as { title?: string; description?: string };
+    const title =
+      (parsed.title && String(parsed.title).trim().slice(0, 80)) ||
+      transcript.split(/[.!?\n]/)[0]?.trim().slice(0, 80) ||
+      "Nuova attività";
+    const description =
+      (parsed.description && String(parsed.description).trim().slice(0, 400)) ||
+      transcript.trim().slice(0, 400) ||
+      "Note importate dalla dettatura.";
+
+    return { title, description };
+  } catch (error) {
+    console.error("suggestTaskFromTranscript failed", error);
+    const fallbackTitle =
+      transcript.split(/[.!?\n]/)[0]?.trim().slice(0, 80) || "Nuova attività";
+    return {
+      title: fallbackTitle,
+      description: transcript.trim().slice(0, 400) || "Note importate dalla dettatura.",
+    };
+  }
+}

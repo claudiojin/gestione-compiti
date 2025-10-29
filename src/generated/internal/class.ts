@@ -45,7 +45,7 @@ const config: runtime.GetPrismaClientConfig = {
   "datasourceNames": [
     "db"
   ],
-  "activeProvider": "sqlite",
+  "activeProvider": "mysql",
   "inlineDatasources": {
     "db": {
       "url": {
@@ -54,8 +54,8 @@ const config: runtime.GetPrismaClientConfig = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated\"\n}\n\ndatasource db {\n  provider = \"sqlite\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Task {\n  id              String    @id @default(cuid())\n  title           String\n  description     String?\n  createdAt       DateTime  @default(now())\n  updatedAt       DateTime  @default(now()) @updatedAt\n  dueDate         DateTime?\n  importance      Int       @default(3)\n  aiPriorityScore Float?\n  status          String    @default(\"TODO\")\n  source          String    @default(\"manual\")\n  userId          String\n  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@index([status])\n  @@index([dueDate])\n  @@index([userId, status])\n}\n\nmodel User {\n  id           String   @id @default(cuid())\n  email        String   @unique\n  passwordHash String\n  name         String?\n  createdAt    DateTime @default(now())\n  updatedAt    DateTime @default(now()) @updatedAt\n  tasks        Task[]\n}\n",
-  "inlineSchemaHash": "75fd31c7f52c6c649b88f02fcb2a4250dcd1d87cc8e7b0728465d98dc59f7739",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated\"\n}\n\ndatasource db {\n  provider = \"mysql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Task {\n  id              String    @id @default(cuid())\n  title           String\n  description     String?\n  createdAt       DateTime  @default(now())\n  updatedAt       DateTime  @default(now()) @updatedAt\n  dueDate         DateTime?\n  importance      Int       @default(3)\n  aiPriorityScore Float?\n  status          String    @default(\"TODO\")\n  source          String    @default(\"manual\")\n  userId          String\n  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@index([status])\n  @@index([dueDate])\n  @@index([userId, status])\n}\n\nmodel User {\n  id           String   @id @default(cuid())\n  email        String   @unique\n  passwordHash String\n  name         String?\n  createdAt    DateTime @default(now())\n  updatedAt    DateTime @default(now()) @updatedAt\n  tasks        Task[]\n}\n",
+  "inlineSchemaHash": "fd7881eabd03d03762a1dee9038484be87dd930ca8c46137f6673d25425a4bc1",
   "copyEngine": true,
   "runtimeDataModel": {
     "models": {},

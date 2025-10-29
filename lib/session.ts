@@ -1,7 +1,6 @@
-import type { IronSession, IronSessionOptions } from "iron-session";
-import { getIronSession as getIronEdgeSession } from "iron-session/edge";
-import { getIronSession as getIronNodeSession } from "iron-session";
 import { cookies } from "next/headers";
+import { getIronSession, unsealData } from "iron-session";
+import type { IronSession, SessionOptions } from "iron-session";
 
 export type SessionData = {
   userId?: string;
@@ -15,7 +14,7 @@ if (!SESSION_PASSWORD || SESSION_PASSWORD.length < 32) {
   );
 }
 
-const sessionOptions: IronSessionOptions = {
+const sessionOptions: SessionOptions = {
   cookieName: "taskpilot_session",
   password: SESSION_PASSWORD,
   cookieOptions: {
@@ -25,7 +24,7 @@ const sessionOptions: IronSessionOptions = {
   },
 };
 
-export function getSessionOptions(): IronSessionOptions {
+export function getSessionOptions(): SessionOptions {
   return sessionOptions;
 }
 
@@ -33,17 +32,30 @@ export async function getRouteSession(
   request: Request,
   response: Response,
 ): Promise<IronSession<SessionData>> {
-  return getIronEdgeSession<SessionData>(request, response, sessionOptions);
+  return getIronSession<SessionData>(request, response, sessionOptions);
 }
 
 export async function getRequestSession(
   request: Request,
 ): Promise<IronSession<SessionData>> {
   const response = new Response();
-  return getIronEdgeSession<SessionData>(request, response, sessionOptions);
+  return getIronSession<SessionData>(request, response, sessionOptions);
 }
 
-export async function getServerSession(): Promise<IronSession<SessionData>> {
-  const cookieStore = cookies();
-  return getIronNodeSession<SessionData>(cookieStore, sessionOptions);
+export async function getSessionData(): Promise<SessionData> {
+  const cookieStore = await cookies();
+  const cookie = cookieStore.get(sessionOptions.cookieName);
+  if (!cookie?.value) {
+    return {};
+  }
+
+  try {
+    const data = await unsealData<SessionData>(cookie.value, {
+      password: sessionOptions.password,
+    });
+    return data ?? {};
+  } catch (error) {
+    console.warn("Failed to unseal session cookie", error);
+    return {};
+  }
 }

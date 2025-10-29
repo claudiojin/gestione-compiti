@@ -38,6 +38,7 @@ L’app è raggiungibile su [http://localhost:3000](http://localhost:3000).
 - **Dashboard oggi**: due liste (attive + completate) con note inline e switch di stato.
 - **Coaching AI**: suggerimenti personalizzati e piano prioritario sulla pagina “Piano di oggi”.
 - **Note rapide**: aggiunte sia dalla barra rapida sia dall’editor interno della scheda.
+- **Input vocale**: nella pagina di creazione puoi dettare un’attività o caricare un file audio; Whisper trascrive e l’AI propone titolo e descrizione.
 - **Rigenera piano**: bottone “Rigenera piano AI” richiama `/api/tasks/today` e `/api/tasks` per aggiornare piano, consigli e liste.
 - **Cron giornaliero**: può essere abilitato/disabilitato con `CRON_ENABLED` (default `true`).
 

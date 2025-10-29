@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 
 import { prisma } from "./prisma";
-import { getServerSession } from "./session";
+import { getSessionData } from "./session";
 
 export const PASSWORD_ROUNDS = 12;
 
@@ -18,7 +18,7 @@ export async function findUserByEmail(email: string) {
 }
 
 export async function getCurrentUser() {
-  const session = await getServerSession();
+  const session = await getSessionData();
   if (!session.userId) {
     return null;
   }

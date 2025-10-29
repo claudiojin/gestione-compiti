@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { TodayPlanView, type ClientTask } from "@/components/today-plan-view";
 import { generateTodayPlan } from "@/lib/ai";
-import { getServerSession } from "@/lib/session";
+import { getSessionData } from "@/lib/session";
 import { listTasks } from "@/lib/tasks";
 
 function toClient(task: Awaited<ReturnType<typeof listTasks>>[number]): ClientTask {
@@ -22,7 +22,7 @@ function toClient(task: Awaited<ReturnType<typeof listTasks>>[number]): ClientTa
 }
 
 export default async function TodayPage() {
-  const session = await getServerSession();
+  const session = await getSessionData();
   if (!session.userId) {
     redirect("/login");
   }
