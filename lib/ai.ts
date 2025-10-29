@@ -189,12 +189,14 @@ export type TaskSuggestion = {
   description: string;
 };
 
-function normalizeBuffer(input: ArrayBuffer | Uint8Array | SharedArrayBuffer): ArrayBufferLike {
+function normalizeBuffer(input: ArrayBuffer | Uint8Array | SharedArrayBuffer): ArrayBuffer {
   if (input instanceof Uint8Array) {
     return input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength);
   }
   if (typeof SharedArrayBuffer !== "undefined" && input instanceof SharedArrayBuffer) {
-    return input;
+    const copy = new ArrayBuffer(input.byteLength);
+    new Uint8Array(copy).set(new Uint8Array(input));
+    return copy;
   }
   return input;
 }
