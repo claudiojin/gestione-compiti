@@ -18,9 +18,8 @@ export default function PWACheckPage() {
     // Check HTTPS
     const isHTTPS = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
 
-    // Check manifest
-    const manifestLink = document.querySelector('link[rel="manifest"]');
-    const hasManifest = !!manifestLink;
+    // Check manifest - Next.js 15+ auto-generates manifest route
+    const hasManifest = true; // manifest.ts auto-generates /manifest.webmanifest
 
     // Check if already installed
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
@@ -56,17 +55,16 @@ export default function PWACheckPage() {
     });
 
     // Check manifest via fetch
-    if (hasManifest) {
-      fetch('/manifest.json')
-        .then(res => res.json())
-        .then(data => {
-          console.log('Manifest loaded:', data);
-        })
-        .catch(err => {
-          console.error('Failed to load manifest:', err);
-          setChecks(prev => ({ ...prev, manifest: false }));
-        });
-    }
+    fetch('/manifest.webmanifest')
+      .then(res => res.json())
+      .then(data => {
+        console.log('Manifest loaded:', data);
+        setChecks(prev => ({ ...prev, manifest: true }));
+      })
+      .catch(err => {
+        console.error('Failed to load manifest:', err);
+        setChecks(prev => ({ ...prev, manifest: false }));
+      });
 
     // Test icon loading
     const img = new Image();
