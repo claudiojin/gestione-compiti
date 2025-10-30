@@ -24,7 +24,19 @@ const openaiClient = createClient();
 function createClient() {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
-  return new OpenAI({ apiKey });
+
+  const config: {
+    apiKey: string;
+    baseURL?: string;
+  } = { apiKey };
+
+  // 支持自定义 API endpoint（兼容 OpenAI API 的其他服务）
+  const baseURL = process.env.OPENAI_API_BASE_URL;
+  if (baseURL) {
+    config.baseURL = baseURL;
+  }
+
+  return new OpenAI(config);
 }
 
 function formatTaskForPrompt(task: Task) {
@@ -35,7 +47,7 @@ function formatTaskForPrompt(task: Task) {
     importance: task.importance,
     priority: task.aiPriorityScore ?? calcPriority({ importance: task.importance, dueDate: task.dueDate ?? undefined }),
     dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-    hasNote: Boolean(task.description?.trim()),
+    description: task.description?.trim() || null,
   };
 }
 
@@ -94,22 +106,23 @@ export async function generateTodayPlan(tasks: Task[]): Promise<TodayPlan> {
   const formattedTasks = tasks.map(formatTaskForPrompt);
 
   try {
-    const response = await openaiClient.responses.create({
+    const response = await openaiClient.chat.completions.create({
       model,
-      input: [
+      messages: [
         {
           role: "system",
           content:
-            "Sei un assistente produttivita che parla esclusivamente in italiano. Devi restituire un JSON valido con le chiavi: summary (stringa), advice (array di massimo 5 stringhe brevi) e focus (array di oggetti con id e suggestion). Non aggiungere testo fuori dal JSON.",
+            "Sei un assistente produttivita che parla esclusivamente in italiano. Analizza le attività considerando titolo, priorità, scadenza e SOPRATTUTTO le note/descrizioni (campo 'description') che contengono dettagli importanti. Devi restituire un JSON valido con le chiavi: summary (stringa che riassume la giornata), advice (array di massimo 5 consigli pratici e specifici basati sulle note delle attività), e focus (array di oggetti con id e suggestion, dove suggestion deve essere un consiglio specifico basato sulla descrizione dell'attività). Non aggiungere testo fuori dal JSON.",
         },
         {
           role: "user",
-          content: `Ecco la lista delle attivita con priorita e scadenze: ${JSON.stringify(formattedTasks)}`,
+          content: `Ecco la lista delle attivita con priorita, scadenze e note dettagliate: ${JSON.stringify(formattedTasks, null, 2)}`,
         },
       ],
+      temperature: 0.7,
     });
 
-    const content = response.output_text;
+    const content = response.choices[0]?.message?.content;
     if (!content) {
       return fallbackPlan(tasks);
     }
@@ -252,9 +265,9 @@ export async function suggestTaskFromTranscript(
   const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 
   try {
-    const response = await openaiClient.responses.create({
+    const response = await openaiClient.chat.completions.create({
       model,
-      input: [
+      messages: [
         {
           role: "system",
           content:
@@ -265,9 +278,10 @@ export async function suggestTaskFromTranscript(
           content: `Trascrizione:\n${transcript}\nGenera un oggetto JSON con title (max 80 caratteri) e description (max 400 caratteri).`,
         },
       ],
+      temperature: 0.7,
     });
 
-    let clean = response.output_text?.trim() ?? "";
+    let clean = response.choices[0]?.message?.content?.trim() ?? "";
     if (!clean) {
       throw new Error("Empty response from OpenAI for task suggestion");
     }

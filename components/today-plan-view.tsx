@@ -230,7 +230,7 @@ export function TodayPlanView({
       </section>
 
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             Attivita prioritarie
           </h2>
@@ -257,7 +257,7 @@ export function TodayPlanView({
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 pb-4 sm:grid-cols-2">
+          <div className="space-y-4 pb-4">
             {focusEntries.map((entry) => (
               <div
                 key={entry.task.id}
@@ -294,7 +294,7 @@ export function TodayPlanView({
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 pb-4 sm:grid-cols-2">
+          <div className="space-y-4 pb-4">
             {remainingActive.map((task) => (
               <TaskCard key={task.id} task={task} />
             ))}
@@ -321,7 +321,7 @@ export function TodayPlanView({
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 pb-4 sm:grid-cols-2">
+          <div className="space-y-4 pb-4">
             {completedTasks.map((task) => (
               <TaskCard key={task.id} task={task} />
             ))}

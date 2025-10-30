@@ -143,10 +143,10 @@ export function TaskCard({ task }: TaskCardProps) {
     <article
       className="group relative flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_12px_24px_-16px_rgba(15,23,42,0.35)] backdrop-blur transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_20px_40px_-24px_rgba(15,23,42,0.4)] dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-slate-700"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
           <h3
-            className="line-clamp-2 text-lg font-semibold leading-tight text-slate-900 dark:text-slate-100"
+            className="break-words text-lg font-semibold leading-snug text-slate-900 dark:text-slate-100"
           >
             {task.title}
           </h3>
