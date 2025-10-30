@@ -5,10 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:mobile": "CAPACITOR_BUILD=true next build && npx cap sync",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
     "@prisma/client": "^6.18.0",
     "bcryptjs": "^3.0.2",
     "iron-session": "^8.0.4",

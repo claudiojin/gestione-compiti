@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { TopNav } from "@/components/top-nav";
@@ -17,7 +17,21 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Task Pilot",
   description:
-    "Raccogli le attivita in un attimo, lascia all&apos;AI la priorita e concentrati su cio che conta oggi.",
+    "Raccogli le attivita in un attimo, lascia all'AI la priorita e concentrati su cio che conta oggi.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Task Pilot",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#10b981",
 };
 
 export default function RootLayout({
