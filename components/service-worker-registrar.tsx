@@ -10,13 +10,26 @@ export function ServiceWorkerRegistrar() {
 
     const register = async () => {
       try {
-        await navigator.serviceWorker.register('/sw.js');
+        const registration = await navigator.serviceWorker.register('/sw.js', {
+          scope: '/',
+        });
+        if (process.env.NODE_ENV === 'development') {
+          console.info('Service worker registered', registration);
+        }
       } catch (error) {
         console.error('Service worker registration failed', error);
       }
     };
 
-    register();
+    if (document.readyState === 'complete') {
+      register();
+    } else {
+      window.addEventListener('load', register);
+    }
+
+    return () => {
+      window.removeEventListener('load', register);
+    };
   }, []);
 
   return null;
