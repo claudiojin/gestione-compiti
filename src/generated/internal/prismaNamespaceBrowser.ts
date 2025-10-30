@@ -49,7 +49,8 @@ export const AnyNull = runtime.objectEnumValues.instances.AnyNull
 
 export const ModelName = {
   Task: 'Task',
-  User: 'User'
+  User: 'User',
+  TodayPlan: 'TodayPlan'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -97,6 +98,20 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const TodayPlanScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  summary: 'summary',
+  advice: 'advice',
+  focus: 'focus',
+  tasksHash: 'tasksHash',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TodayPlanScalarFieldEnum = (typeof TodayPlanScalarFieldEnum)[keyof typeof TodayPlanScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -133,4 +148,16 @@ export const UserOrderByRelevanceFieldEnum = {
 } as const
 
 export type UserOrderByRelevanceFieldEnum = (typeof UserOrderByRelevanceFieldEnum)[keyof typeof UserOrderByRelevanceFieldEnum]
+
+
+export const TodayPlanOrderByRelevanceFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  summary: 'summary',
+  advice: 'advice',
+  focus: 'focus',
+  tasksHash: 'tasksHash'
+} as const
+
+export type TodayPlanOrderByRelevanceFieldEnum = (typeof TodayPlanOrderByRelevanceFieldEnum)[keyof typeof TodayPlanOrderByRelevanceFieldEnum]
 

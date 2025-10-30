@@ -71,9 +71,13 @@ export function TodayPlanView({
   );
   const [isTransitioning, startTransition] = useTransition();
 
-  const fetchPlanAndTasks = useCallback(async () => {
+  const fetchPlanAndTasks = useCallback(async (forceRegenerate = false) => {
+    const planUrl = forceRegenerate
+      ? "/api/tasks/today?regenerate=true"
+      : "/api/tasks/today";
+
     const [planRes, tasksRes] = await Promise.all([
-      fetch("/api/tasks/today", { cache: "no-store" }),
+      fetch(planUrl, { cache: "no-store" }),
       fetch("/api/tasks", { cache: "no-store" }),
     ]);
 
@@ -104,7 +108,8 @@ export function TodayPlanView({
   const handleRefresh = useCallback(() => {
     setRefreshState({ status: "loading" });
     startTransition(() => {
-      fetchPlanAndTasks()
+      // Force regeneration when user clicks the refresh button
+      fetchPlanAndTasks(true)
         .then(() => {
           setRefreshState({ status: "idle" });
         })
@@ -122,8 +127,23 @@ export function TodayPlanView({
   // eslint-disable-next-line react-hooks/set-state-in-effect -- we intentionally hydrate once post-mount
   useEffect(() => {
     if (!fetchPlanOnMount) return;
-    handleRefresh();
-  }, [fetchPlanOnMount, handleRefresh]);
+    // On mount, don't force regeneration - use cache if available
+    setRefreshState({ status: "loading" });
+    startTransition(() => {
+      fetchPlanAndTasks(false)
+        .then(() => {
+          setRefreshState({ status: "idle" });
+        })
+        .catch((error) => {
+          console.error("Failed to load plan", error);
+          setRefreshState({
+            status: "error",
+            message:
+              error instanceof Error ? error.message : "Caricamento fallito",
+          });
+        });
+    });
+  }, [fetchPlanOnMount, fetchPlanAndTasks, startTransition]);
 
   const { focusEntries, remainingActive, completedTasks } = useMemo(() => {
     const taskMap = new Map(tasks.map((task) => [task.id, task]));

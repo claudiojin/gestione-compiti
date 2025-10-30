@@ -36,11 +36,27 @@ model Task {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String      @id @default(cuid())
+  email        String      @unique
   passwordHash String
   name         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @default(now()) @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @default(now()) @updatedAt
   tasks        Task[]
+  todayPlan    TodayPlan?
+}
+
+model TodayPlan {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  summary     String   @db.Text
+  advice      String   @db.Text // JSON array
+  focus       String   @db.Text // JSON array
+  tasksHash   String   // Hash of task data to detect changes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@index([userId])
+  @@index([tasksHash])
 }

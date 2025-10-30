@@ -9,4 +9,5 @@
  */
 export type * from './models/Task'
 export type * from './models/User'
+export type * from './models/TodayPlan'
 export type * from './commonInputTypes'

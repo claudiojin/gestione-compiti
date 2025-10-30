@@ -1,7 +1,10 @@
+import crypto from "crypto";
+
 import OpenAI from "openai";
 
 import type { Task } from "./prisma";
 import { calcPriority } from "./priority";
+import { prisma } from "./prisma";
 
 type PlanTask = {
   id: string;
@@ -51,6 +54,80 @@ function formatTaskForPrompt(task: Task) {
   };
 }
 
+/**
+ * Generate a hash of task data to detect changes
+ * Considers: id, title, description, status, importance, dueDate, updatedAt
+ */
+function generateTasksHash(tasks: Task[]): string {
+  const relevantData = tasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    importance: task.importance,
+    dueDate: task.dueDate?.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
+  }));
+
+  // Sort by id to ensure consistent ordering
+  relevantData.sort((a, b) => a.id.localeCompare(b.id));
+
+  const dataString = JSON.stringify(relevantData);
+  return crypto.createHash("sha256").update(dataString).digest("hex");
+}
+
+/**
+ * Get cached plan from database if exists and tasks haven't changed
+ */
+async function getCachedPlan(userId: string, tasksHash: string): Promise<TodayPlan | null> {
+  try {
+    const cached = await prisma.todayPlan.findUnique({
+      where: { userId },
+    });
+
+    if (!cached || cached.tasksHash !== tasksHash) {
+      return null;
+    }
+
+    // Parse the stored JSON data
+    return {
+      summary: cached.summary,
+      advice: JSON.parse(cached.advice),
+      focus: JSON.parse(cached.focus),
+    };
+  } catch (error) {
+    console.error("Failed to get cached plan", error);
+    return null;
+  }
+}
+
+/**
+ * Save plan to database cache
+ */
+async function savePlanCache(userId: string, tasksHash: string, plan: TodayPlan): Promise<void> {
+  try {
+    await prisma.todayPlan.upsert({
+      where: { userId },
+      create: {
+        userId,
+        tasksHash,
+        summary: plan.summary,
+        advice: JSON.stringify(plan.advice),
+        focus: JSON.stringify(plan.focus),
+      },
+      update: {
+        tasksHash,
+        summary: plan.summary,
+        advice: JSON.stringify(plan.advice),
+        focus: JSON.stringify(plan.focus),
+        updatedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error("Failed to save plan cache", error);
+  }
+}
+
 function fallbackPlan(tasks: Task[]): TodayPlan {
   const active = tasks.filter((task) => task.status.toUpperCase() !== "DONE");
   const sorted = [...active].sort((a, b) => {
@@ -89,13 +166,25 @@ function fallbackPlan(tasks: Task[]): TodayPlan {
   };
 }
 
-export async function generateTodayPlan(tasks: Task[]): Promise<TodayPlan> {
+export async function generateTodayPlan(tasks: Task[], userId: string, forceRegenerate = false): Promise<TodayPlan> {
   if (tasks.length === 0) {
     return {
       summary: "Non ci sono attivita in programma: scegli un obiettivo importante da impostare.",
       advice: ["Identifica un risultato che desideri raggiungere entro questa settimana.", "Pianifica una sessione di brainstorming o revisione strategie."],
       focus: [],
     };
+  }
+
+  // Generate hash of current task data
+  const tasksHash = generateTasksHash(tasks);
+
+  // Check cache if not forcing regeneration
+  if (!forceRegenerate) {
+    const cachedPlan = await getCachedPlan(userId, tasksHash);
+    if (cachedPlan) {
+      console.log("Returning cached plan for user", userId);
+      return cachedPlan;
+    }
   }
 
   if (!openaiClient) {
@@ -180,11 +269,16 @@ export async function generateTodayPlan(tasks: Task[]): Promise<TodayPlan> {
       return fallbackPlan(tasks);
     }
 
-    return {
+    const plan: TodayPlan = {
       summary: parsed.summary,
       advice: adviceList.slice(0, 5),
       focus: focusTasks,
     };
+
+    // Save to cache
+    await savePlanCache(userId, tasksHash, plan);
+
+    return plan;
   } catch (error) {
     console.error("generateTodayPlan failed", error);
     return fallbackPlan(tasks);

@@ -390,7 +390,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   Task: 'Task',
-  User: 'User'
+  User: 'User',
+  TodayPlan: 'TodayPlan'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -406,7 +407,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "task" | "user"
+    modelProps: "task" | "user" | "todayPlan"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -542,6 +543,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    TodayPlan: {
+      payload: Prisma.$TodayPlanPayload<ExtArgs>
+      fields: Prisma.TodayPlanFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TodayPlanFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TodayPlanPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TodayPlanFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TodayPlanPayload>
+        }
+        findFirst: {
+          args: Prisma.TodayPlanFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TodayPlanPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TodayPlanFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TodayPlanPayload>
+        }
+        findMany: {
+          args: Prisma.TodayPlanFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TodayPlanPayload>[]
+        }
+        create: {
+          args: Prisma.TodayPlanCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TodayPlanPayload>
+        }
+        createMany: {
+          args: Prisma.TodayPlanCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.TodayPlanDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TodayPlanPayload>
+        }
+        update: {
+          args: Prisma.TodayPlanUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TodayPlanPayload>
+        }
+        deleteMany: {
+          args: Prisma.TodayPlanDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TodayPlanUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.TodayPlanUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TodayPlanPayload>
+        }
+        aggregate: {
+          args: Prisma.TodayPlanAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTodayPlan>
+        }
+        groupBy: {
+          args: Prisma.TodayPlanGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TodayPlanGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TodayPlanCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TodayPlanCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -610,6 +677,20 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const TodayPlanScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  summary: 'summary',
+  advice: 'advice',
+  focus: 'focus',
+  tasksHash: 'tasksHash',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TodayPlanScalarFieldEnum = (typeof TodayPlanScalarFieldEnum)[keyof typeof TodayPlanScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -646,6 +727,18 @@ export const UserOrderByRelevanceFieldEnum = {
 } as const
 
 export type UserOrderByRelevanceFieldEnum = (typeof UserOrderByRelevanceFieldEnum)[keyof typeof UserOrderByRelevanceFieldEnum]
+
+
+export const TodayPlanOrderByRelevanceFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  summary: 'summary',
+  advice: 'advice',
+  focus: 'focus',
+  tasksHash: 'tasksHash'
+} as const
+
+export type TodayPlanOrderByRelevanceFieldEnum = (typeof TodayPlanOrderByRelevanceFieldEnum)[keyof typeof TodayPlanOrderByRelevanceFieldEnum]
 
 
 
@@ -770,6 +863,7 @@ export interface PrismaClientOptions {
 export type GlobalOmitConfig = {
   task?: Prisma.TaskOmit
   user?: Prisma.UserOmit
+  todayPlan?: Prisma.TodayPlanOmit
 }
 
 /* Types for Logging */

@@ -13,8 +13,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
     }
 
+    // Check if regeneration is explicitly requested via query parameter
+    const url = new URL(request.url);
+    const forceRegenerate = url.searchParams.get("regenerate") === "true";
+
     const tasks = await listTasks(session.userId);
-    const plan = await generateTodayPlan(tasks);
+    const plan = await generateTodayPlan(tasks, session.userId, forceRegenerate);
     return NextResponse.json(plan);
   } catch (error) {
     console.error("Failed to generate today plan", error);

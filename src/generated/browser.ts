@@ -26,3 +26,8 @@ export type Task = Prisma.TaskModel
  * 
  */
 export type User = Prisma.UserModel
+/**
+ * Model TodayPlan
+ * 
+ */
+export type TodayPlan = Prisma.TodayPlanModel
