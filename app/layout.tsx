@@ -20,7 +20,6 @@ export const metadata: Metadata = {
   title: "Task Pilot",
   description:
     "Raccogli le attivita in un attimo, lascia all'AI la priorita e concentrati su cio che conta oggi.",
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
