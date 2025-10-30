@@ -72,30 +72,30 @@ export function InstallBanner() {
           <span className="text-3xl">📱</span>
           <div className="flex-1">
             <h3 className="font-semibold text-white mb-1">
-              安装 Task Pilot
+              Installa Task Pilot
             </h3>
             <p className="text-sm text-emerald-50 mb-3">
-              像原生应用一样使用，无需应用商店
+              Usa come App
             </p>
             <div className="flex gap-2">
               <button
                 onClick={handleInstall}
                 className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50 transition-colors"
               >
-                安装
+                Installa
               </button>
               <button
                 onClick={handleDismiss}
                 className="rounded-lg bg-emerald-600/50 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600/70 transition-colors"
               >
-                稍后
+                Dopo
               </button>
             </div>
           </div>
           <button
             onClick={handleDismiss}
             className="text-white hover:text-emerald-100 transition-colors"
-            aria-label="关闭"
+            aria-label="close"
           >
             ✕
           </button>
