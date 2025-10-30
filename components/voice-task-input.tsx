@@ -37,13 +37,6 @@ export function VoiceTaskInput({ onSuggestion }: VoiceTaskInputProps) {
     return "Premi registra e detta il compito da aggiungere.";
   }, []);
 
-  const resetRecorder = () => {
-    mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
-    mediaRecorderRef.current = null;
-    chunksRef.current = [];
-    setIsRecording(false);
-  };
-
   const handleRecordingAvailable = (event: BlobEvent) => {
     if (event.data && event.data.size > 0) {
       chunksRef.current.push(event.data);

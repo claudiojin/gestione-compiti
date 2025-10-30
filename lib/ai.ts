@@ -191,14 +191,16 @@ export type TaskSuggestion = {
 
 function normalizeBuffer(input: ArrayBuffer | Uint8Array | SharedArrayBuffer): ArrayBuffer {
   if (input instanceof Uint8Array) {
-    return input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength);
+    const copy = new Uint8Array(input.byteLength);
+    copy.set(input);
+    return copy.buffer;
   }
   if (typeof SharedArrayBuffer !== "undefined" && input instanceof SharedArrayBuffer) {
     const copy = new ArrayBuffer(input.byteLength);
     new Uint8Array(copy).set(new Uint8Array(input));
     return copy;
   }
-  return input;
+  return input as ArrayBuffer;
 }
 
 export async function transcribeAudio(input: TranscriptionPayload): Promise<string | null> {
@@ -215,11 +217,17 @@ export async function transcribeAudio(input: TranscriptionPayload): Promise<stri
       type: input.mimeType || "audio/webm",
     });
 
-    const transcription: any = await openaiClient.audio.transcriptions.create({
+    type WhisperTranscription =
+      | string
+      | {
+          text?: string | null;
+        };
+
+    const transcription = (await openaiClient.audio.transcriptions.create({
       model,
       file,
       response_format: "text",
-    });
+    })) as WhisperTranscription;
 
     const text = typeof transcription === "string" ? transcription : transcription?.text ?? "";
 

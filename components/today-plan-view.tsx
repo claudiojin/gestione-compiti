@@ -1,7 +1,6 @@
 'use client';
 
-import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 
 import { TaskCard } from "@/components/task-card";
 import type { TodayPlan } from "@/lib/ai";
@@ -22,6 +21,7 @@ export type ClientTask = {
 type TodayPlanViewProps = {
   initialPlan: TodayPlan;
   initialTasks: ClientTask[];
+  fetchPlanOnMount?: boolean;
 };
 
 type RefreshState =
@@ -59,12 +59,71 @@ function normalizeTask(task: ApiTask): ClientTask {
   };
 }
 
-export function TodayPlanView({ initialPlan, initialTasks }: TodayPlanViewProps) {
-  const router = useRouter();
+export function TodayPlanView({
+  initialPlan,
+  initialTasks,
+  fetchPlanOnMount = false,
+}: TodayPlanViewProps) {
   const [plan, setPlan] = useState<TodayPlan>(initialPlan);
   const [tasks, setTasks] = useState<ClientTask[]>(initialTasks);
-  const [refreshState, setRefreshState] = useState<RefreshState>({ status: "idle" });
+  const [refreshState, setRefreshState] = useState<RefreshState>(
+    fetchPlanOnMount ? { status: "loading" } : { status: "idle" },
+  );
   const [isTransitioning, startTransition] = useTransition();
+
+  const fetchPlanAndTasks = useCallback(async () => {
+    const [planRes, tasksRes] = await Promise.all([
+      fetch("/api/tasks/today", { cache: "no-store" }),
+      fetch("/api/tasks", { cache: "no-store" }),
+    ]);
+
+    const planJson = await planRes.json().catch(() => null);
+    if (!planRes.ok || !planJson) {
+      const message =
+        planJson && typeof planJson.error === "string"
+          ? planJson.error
+          : "Piano AI non disponibile";
+      throw new Error(message);
+    }
+
+    const tasksJson = await tasksRes.json().catch(() => null);
+    if (!tasksRes.ok || !tasksJson) {
+      const message =
+        tasksJson && typeof tasksJson.error === "string"
+          ? tasksJson.error
+          : "Non sono riuscito a ricaricare le attivita";
+      throw new Error(message);
+    }
+
+    setPlan(planJson);
+    setTasks(
+      Array.isArray(tasksJson.tasks) ? tasksJson.tasks.map(normalizeTask) : [],
+    );
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshState({ status: "loading" });
+    startTransition(() => {
+      fetchPlanAndTasks()
+        .then(() => {
+          setRefreshState({ status: "idle" });
+        })
+        .catch((error) => {
+          console.error("Failed to refresh plan", error);
+          setRefreshState({
+            status: "error",
+            message:
+              error instanceof Error ? error.message : "Aggiornamento fallito",
+          });
+        });
+    });
+  }, [fetchPlanAndTasks, startTransition]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- we intentionally hydrate once post-mount
+  useEffect(() => {
+    if (!fetchPlanOnMount) return;
+    handleRefresh();
+  }, [fetchPlanOnMount, handleRefresh]);
 
   const { focusEntries, remainingActive, completedTasks } = useMemo(() => {
     const taskMap = new Map(tasks.map((task) => [task.id, task]));
@@ -102,42 +161,25 @@ export function TodayPlanView({ initialPlan, initialTasks }: TodayPlanViewProps)
     return { focusEntries, remainingActive, completedTasks };
   }, [plan, tasks]);
 
-  const handleRefresh = () => {
-    setRefreshState({ status: "loading" });
-    startTransition(async () => {
-      try {
-        const [planRes, tasksRes] = await Promise.all([
-          fetch("/api/tasks/today", { cache: "no-store" }),
-          fetch("/api/tasks", { cache: "no-store" }),
-        ]);
-
-        if (!planRes.ok) {
-          throw new Error("Piano AI non disponibile");
-        }
-        if (!tasksRes.ok) {
-          throw new Error("Non sono riuscito a ricaricare le attivita");
-        }
-
-        const planJson = await planRes.json();
-        const tasksJson = await tasksRes.json();
-
-        setPlan(planJson);
-        setTasks(Array.isArray(tasksJson.tasks) ? tasksJson.tasks.map(normalizeTask) : []);
-        setRefreshState({ status: "idle" });
-      } catch (error) {
-        console.error("Failed to refresh plan", error);
-        setRefreshState({
-          status: "error",
-          message: error instanceof Error ? error.message : "Aggiornamento fallito",
-        });
-      } finally {
-        router.refresh();
-      }
-    });
-  };
+  const isLoading = refreshState.status === "loading" || isTransitioning;
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
+      <header className="rounded-3xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-slate-900 px-6 py-8 text-white shadow-[0_28px_60px_-32px_rgba(16,185,129,0.6)] sm:px-8">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
+          Piano di oggi
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">
+          Il tuo riepilogo di focus
+        </h1>
+        <p className="mt-4 text-base text-white/80 sm:text-lg">{plan.summary}</p>
+        {isLoading ? (
+          <p className="mt-3 text-sm text-white/70">
+            Sto aggiornando il piano con il coach AI...
+          </p>
+        ) : null}
+      </header>
+
       <section className="rounded-3xl border border-slate-200 bg-white/90 px-6 py-6 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.35)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/70">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -151,12 +193,10 @@ export function TodayPlanView({ initialPlan, initialTasks }: TodayPlanViewProps)
           <button
             type="button"
             onClick={handleRefresh}
-            disabled={refreshState.status === "loading" || isTransitioning}
+            disabled={isLoading}
             className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-emerald-400 dark:text-emerald-950 dark:hover:bg-emerald-300"
           >
-            {refreshState.status === "loading" || isTransitioning
-              ? "Rigenerazione..."
-              : "Rigenera piano AI"}
+            {isLoading ? "Rigenerazione..." : "Rigenera piano AI"}
           </button>
         </div>
         {refreshState.status === "error" ? (
@@ -164,7 +204,11 @@ export function TodayPlanView({ initialPlan, initialTasks }: TodayPlanViewProps)
             {refreshState.message}
           </p>
         ) : null}
-        {plan.advice.length === 0 ? (
+        {isLoading ? (
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            Sto preparando suggerimenti personalizzati basati sulle tue attivita.
+          </p>
+        ) : plan.advice.length === 0 ? (
           <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
             Aggiungi qualche attivita per ricevere suggerimenti mirati.
           </p>
@@ -194,24 +238,36 @@ export function TodayPlanView({ initialPlan, initialTasks }: TodayPlanViewProps)
             Selezionate dal coach AI
           </span>
         </div>
-        {focusEntries.length === 0 ? (
+        {isLoading ? (
+          <div className="rounded-3xl border border-dashed border-emerald-200 bg-emerald-50/80 px-6 py-12 text-center shadow-sm dark:border-emerald-800/60 dark:bg-emerald-900/40">
+            <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-200">
+              Sto selezionando le attivita su cui concentrarti.
+            </p>
+            <p className="mt-2 text-sm text-emerald-600/80 dark:text-emerald-200/80">
+              Tra pochi istanti avrai un focus mirato per oggi.
+            </p>
+          </div>
+        ) : focusEntries.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
             <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
               Nessuna attivita urgente al momento.
             </p>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Quando aggiungerai attivita con scadenze o importanza, il piano apparira qui.
+              Continua ad aggiornare le tue attivita per ricevere suggerimenti piu accurati.
             </p>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {focusEntries.map(({ task, suggestion }) => (
-              <div key={task.id} className="space-y-3">
-                <TaskCard task={task} />
-                {suggestion ? (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-200">
-                    <span className="font-semibold">Consiglio:</span> {suggestion}
-                  </div>
+          <div className="grid gap-4 pb-4 sm:grid-cols-2">
+            {focusEntries.map((entry) => (
+              <div
+                key={entry.task.id}
+                className="rounded-3xl border border-emerald-100 bg-emerald-50/80 p-5 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-900/40"
+              >
+                <TaskCard task={entry.task} />
+                {entry.suggestion ? (
+                  <p className="mt-3 rounded-2xl border border-emerald-200/60 bg-white/60 px-4 py-3 text-sm text-emerald-800 shadow-sm dark:border-emerald-700/60 dark:bg-emerald-900/60 dark:text-emerald-100">
+                    {entry.suggestion}
+                  </p>
                 ) : null}
               </div>
             ))}
@@ -225,15 +281,20 @@ export function TodayPlanView({ initialPlan, initialTasks }: TodayPlanViewProps)
             Altre attivita attive
           </h2>
           <span className="text-sm text-slate-500 dark:text-slate-400">
-            Ordinata per priorita residua
+            Continua da qui appena liberi
           </span>
         </div>
         {remainingActive.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-slate-300 bg-white/70 px-6 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400">
-            Tutte le attivita attive sono gia nella lista prioritaria.
-          </p>
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
+            <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+              Ottimo! Hai lavorato su tutto il resto.
+            </p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Aggiorna lo stato delle attivita completate per mantenere la lista pulita.
+            </p>
+          </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-4 pb-4 sm:grid-cols-2">
             {remainingActive.map((task) => (
               <TaskCard key={task.id} task={task} />
             ))}
@@ -241,27 +302,32 @@ export function TodayPlanView({ initialPlan, initialTasks }: TodayPlanViewProps)
         )}
       </section>
 
-      <section className="space-y-4">
+      <section className="space-y-4 pb-10">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            Attivita completate
+            Recentemente completate
           </h2>
           <span className="text-sm text-slate-500 dark:text-slate-400">
-            Le piu recenti finiscono in fondo
+            Mantieni lo slancio!
           </span>
         </div>
         {completedTasks.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-slate-300 bg-white/50 px-6 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
-            Completa un&apos;attivita per vederla apparire qui.
-          </p>
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
+            <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+              Completa qualcosa e festeggiamo!
+            </p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Appena completi un&apos;attivita, comparira qui.
+            </p>
+          </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-4 pb-4 sm:grid-cols-2">
             {completedTasks.map((task) => (
               <TaskCard key={task.id} task={task} />
             ))}
           </div>
         )}
       </section>
-    </>
+    </div>
   );
 }

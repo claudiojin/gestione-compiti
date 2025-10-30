@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { TodayPlanView, type ClientTask } from "@/components/today-plan-view";
-import { generateTodayPlan } from "@/lib/ai";
+import type { TodayPlan } from "@/lib/ai";
 import { getSessionData } from "@/lib/session";
 import { listTasks } from "@/lib/tasks";
 
@@ -28,8 +28,13 @@ export default async function TodayPage() {
   }
 
   const tasks = await listTasks(session.userId);
-  const plan = await generateTodayPlan(tasks);
   const clientTasks = tasks.map(toClient);
+
+  const placeholderPlan: TodayPlan = {
+    summary: "Sto preparando il tuo riepilogo personalizzato...",
+    advice: [],
+    focus: [],
+  };
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-10 sm:px-6 lg:px-8">
@@ -45,17 +50,11 @@ export default async function TodayPage() {
         </span>
       </nav>
 
-      <header className="rounded-3xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-slate-900 px-6 py-8 text-white shadow-[0_28px_60px_-32px_rgba(16,185,129,0.6)] sm:px-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-          Piano di oggi
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">
-          Il tuo riepilogo di focus
-        </h1>
-        <p className="mt-4 text-base text-white/80 sm:text-lg">{plan.summary}</p>
-      </header>
-
-      <TodayPlanView initialPlan={plan} initialTasks={clientTasks} />
+      <TodayPlanView
+        initialPlan={placeholderPlan}
+        initialTasks={clientTasks}
+        fetchPlanOnMount
+      />
     </div>
   );
 }

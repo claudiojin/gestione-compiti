@@ -1,5 +1,5 @@
-import { cookies } from "next/headers";
-import { getIronSession, unsealData } from "iron-session";
+import { headers } from "next/headers";
+import { getIronSession } from "iron-session";
 import type { IronSession, SessionOptions } from "iron-session";
 
 export type SessionData = {
@@ -43,19 +43,18 @@ export async function getRequestSession(
 }
 
 export async function getSessionData(): Promise<SessionData> {
-  const cookieStore = await cookies();
-  const cookie = cookieStore.get(sessionOptions.cookieName);
-  if (!cookie?.value) {
+  const headerList = await headers();
+  const cookieHeader = headerList.get("cookie") ?? "";
+  if (!cookieHeader) {
     return {};
   }
 
-  try {
-    const data = await unsealData<SessionData>(cookie.value, {
-      password: sessionOptions.password,
-    });
-    return data ?? {};
-  } catch (error) {
-    console.warn("Failed to unseal session cookie", error);
-    return {};
-  }
+  const request = new Request("http://localhost/session", {
+    headers: { cookie: cookieHeader },
+  });
+  const response = new Response();
+  const session = await getIronSession<SessionData>(request, response, sessionOptions);
+  return {
+    userId: session.userId,
+  };
 }
