@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { TopNav } from "@/components/top-nav";
+import { InstallBanner } from "@/components/install-banner";
+import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,9 +46,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100`}
       >
+        <ServiceWorkerRegistrar />
         <div className="relative flex min-h-screen flex-col">
           <TopNav />
           <main className="flex-1">{children}</main>
+          <InstallBanner />
         </div>
       </body>
     </html>
