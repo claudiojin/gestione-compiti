@@ -285,65 +285,10 @@ export async function generateTodayPlan(tasks: Task[], userId: string, forceRege
   }
 }
 
-type TranscriptionPayload = {
-  buffer: ArrayBuffer | Uint8Array | SharedArrayBuffer;
-  filename: string;
-  mimeType: string;
-};
-
 export type TaskSuggestion = {
   title: string;
   description: string;
 };
-
-function normalizeBuffer(input: ArrayBuffer | Uint8Array | SharedArrayBuffer): ArrayBuffer {
-  if (input instanceof Uint8Array) {
-    const copy = new Uint8Array(input.byteLength);
-    copy.set(input);
-    return copy.buffer;
-  }
-  if (typeof SharedArrayBuffer !== "undefined" && input instanceof SharedArrayBuffer) {
-    const copy = new ArrayBuffer(input.byteLength);
-    new Uint8Array(copy).set(new Uint8Array(input));
-    return copy;
-  }
-  return input as ArrayBuffer;
-}
-
-export async function transcribeAudio(input: TranscriptionPayload): Promise<string | null> {
-  if (!openaiClient) {
-    return null;
-  }
-
-  const model = process.env.OPENAI_WHISPER_MODEL ?? "whisper-1";
-  const arrayBuffer = normalizeBuffer(input.buffer);
-
-  try {
-    const blob = new Blob([arrayBuffer], { type: input.mimeType || "audio/webm" });
-    const file = new File([blob], input.filename || "voice-input.webm", {
-      type: input.mimeType || "audio/webm",
-    });
-
-    type WhisperTranscription =
-      | string
-      | {
-          text?: string | null;
-        };
-
-    const transcription = (await openaiClient.audio.transcriptions.create({
-      model,
-      file,
-      response_format: "text",
-    })) as WhisperTranscription;
-
-    const text = typeof transcription === "string" ? transcription : transcription?.text ?? "";
-
-    return text?.trim() ?? null;
-  } catch (error) {
-    console.error("transcribeAudio failed", error);
-    return null;
-  }
-}
 
 export async function suggestTaskFromTranscript(
   transcript: string,

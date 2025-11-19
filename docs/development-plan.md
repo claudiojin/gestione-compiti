@@ -60,7 +60,7 @@ model Task {
 - `GET /api/tasks`: list tasks sorted by priority and created date.
 - `PATCH /api/tasks/:id`: update mutable fields (status, title, etc.).
 - `DELETE /api/tasks/:id`: remove a task.
-- `POST /api/tasks/voice`: receive multipart audio, transcribe via Whisper, generate tasks.
+- `POST /api/tasks/voice`: receive multipart audio, transcribe via Browser, generate tasks.
 - `GET /api/tasks/today`: return AI-crafted summary plus prioritised task list.
 
 ## 7. Priority Calculation

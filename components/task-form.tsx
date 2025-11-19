@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 
-import { VoiceTaskInput, type VoiceSuggestion } from "@/components/voice-task-input";
+import { BrowserVoiceInput, type VoiceSuggestion } from "@/components/browser-voice-input";
 
 type TaskFormProps = {
   mode?: "create" | "edit";
@@ -171,7 +171,7 @@ export function TaskForm({ mode = "create" }: TaskFormProps) {
         </div>
       </div>
 
-      <VoiceTaskInput onSuggestion={applyVoiceSuggestion} />
+      <BrowserVoiceInput onSuggestion={applyVoiceSuggestion} />
       {voiceTranscript ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
