@@ -15,6 +15,8 @@ type TaskCardProps = {
     createdAt: string;
     updatedAt: string;
   };
+  onTaskUpdate?: (updatedTask: Partial<TaskCardProps['task']> & Pick<TaskCardProps['task'], 'id'>) => void;
+  onTaskDelete?: (deletedTaskId: string) => void;
 };
 
 function formatDueDate(input: string | null | undefined): string | null {
@@ -59,7 +61,7 @@ const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "DONE", label: "Completata" },
 ];
 
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({ task, onTaskUpdate, onTaskDelete }: TaskCardProps) {
   const router = useRouter();
   const [isUpdating, startTransition] = useTransition();
   const [isEditingNote, setIsEditingNote] = useState(false);
@@ -82,6 +84,14 @@ export function TaskCard({ task }: TaskCardProps) {
         });
         if (!res.ok) {
           console.error("Errore nel cambio di stato", await res.text());
+        } else {
+          // If the update was successful, call the callback with the updated task
+          const updatedTask = {
+            ...task,
+            status: nextStatus,
+            updatedAt: new Date().toISOString(),
+          };
+          onTaskUpdate?.(updatedTask);
         }
       } catch (error) {
         console.error("Errore nel cambio di stato", error);
@@ -102,6 +112,9 @@ export function TaskCard({ task }: TaskCardProps) {
         });
         if (!res.ok) {
           console.error("Errore durante l'eliminazione", await res.text());
+        } else {
+          // If the deletion was successful, call the callback
+          onTaskDelete?.(task.id);
         }
       } catch (error) {
         console.error("Errore durante l'eliminazione", error);
@@ -131,6 +144,13 @@ export function TaskCard({ task }: TaskCardProps) {
         }
         setNoteStatus("Nota aggiornata.");
         setIsEditingNote(false);
+        // If the update was successful, call the callback with the updated task
+        const updatedTask = {
+          ...task,
+          description: payload.description,
+          updatedAt: new Date().toISOString(),
+        };
+        onTaskUpdate?.(updatedTask);
         router.refresh();
       } catch (error) {
         console.error("Errore nel salvataggio della nota", error);
@@ -141,7 +161,7 @@ export function TaskCard({ task }: TaskCardProps) {
 
   return (
     <article
-      className="group relative flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_12px_24px_-16px_rgba(15,23,42,0.35)] backdrop-blur transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_20px_40px_-24px_rgba(15,23,42,0.4)] dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-slate-700"
+      className="group relative flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_12px_24px_-16px_rgba(15,23,42,0.35)] backdrop-blur transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_20px_40px_-24px_rgba(15,23,42,0.4)] dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-slate-700 sm:p-5"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">

@@ -22,6 +22,8 @@ type TodayPlanViewProps = {
   initialPlan: TodayPlan;
   initialTasks: ClientTask[];
   fetchPlanOnMount?: boolean;
+  onTaskUpdate?: (updatedTask: ClientTask) => void;
+  onTaskDelete?: (deletedTaskId: string) => void;
 };
 
 type RefreshState =
@@ -63,6 +65,8 @@ export function TodayPlanView({
   initialPlan,
   initialTasks,
   fetchPlanOnMount = false,
+  onTaskUpdate,
+  onTaskDelete,
 }: TodayPlanViewProps) {
   const [plan, setPlan] = useState<TodayPlan>(initialPlan);
   const [tasks, setTasks] = useState<ClientTask[]>(initialTasks);
@@ -70,6 +74,23 @@ export function TodayPlanView({
     fetchPlanOnMount ? { status: "loading" } : { status: "idle" },
   );
   const [isTransitioning, startTransition] = useTransition();
+
+  const handleTaskUpdate = useCallback((updatedTask: Partial<ClientTask> & Pick<ClientTask, 'id'>) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === updatedTask.id ? { ...task, ...updatedTask } : task
+      )
+    );
+    // If we have all required fields, pass to parent callback
+    if (updatedTask.title && updatedTask.status && updatedTask.createdAt && updatedTask.updatedAt) {
+      onTaskUpdate?.(updatedTask as ClientTask);
+    }
+  }, [onTaskUpdate]);
+
+  const handleTaskDelete = useCallback((deletedTaskId: string) => {
+    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== deletedTaskId));
+    onTaskDelete?.(deletedTaskId);
+  }, [onTaskDelete]);
 
   const fetchPlanAndTasks = useCallback(async (forceRegenerate = false) => {
     const planUrl = forceRegenerate
@@ -283,7 +304,11 @@ export function TodayPlanView({
                 key={entry.task.id}
                 className="rounded-3xl border border-emerald-100 bg-emerald-50/80 p-5 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-900/40"
               >
-                <TaskCard task={entry.task} />
+                <TaskCard
+                  task={entry.task}
+                  onTaskUpdate={handleTaskUpdate}
+                  onTaskDelete={handleTaskDelete}
+                />
                 {entry.suggestion ? (
                   <p className="mt-3 rounded-2xl border border-emerald-200/60 bg-white/60 px-4 py-3 text-sm text-emerald-800 shadow-sm dark:border-emerald-700/60 dark:bg-emerald-900/60 dark:text-emerald-100">
                     {entry.suggestion}
@@ -316,7 +341,12 @@ export function TodayPlanView({
         ) : (
           <div className="space-y-4 pb-4">
             {remainingActive.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onTaskUpdate={handleTaskUpdate}
+                onTaskDelete={handleTaskDelete}
+              />
             ))}
           </div>
         )}
@@ -343,7 +373,12 @@ export function TodayPlanView({
         ) : (
           <div className="space-y-4 pb-4">
             {completedTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onTaskUpdate={handleTaskUpdate}
+                onTaskDelete={handleTaskDelete}
+              />
             ))}
           </div>
         )}

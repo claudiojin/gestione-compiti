@@ -22,7 +22,7 @@ const config: runtime.GetPrismaClientConfig = {
       "value": "prisma-client"
     },
     "output": {
-      "value": "/home/claudio/gestione-compiti/src/generated",
+      "value": "/home/imf/projects/gestione-compiti/src/generated",
       "fromEnvVar": null
     },
     "config": {
@@ -48,7 +48,7 @@ const config: runtime.GetPrismaClientConfig = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/home/claudio/gestione-compiti/prisma/schema.prisma",
+    "sourceFilePath": "/home/imf/projects/gestione-compiti/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativePath": "../../prisma",
